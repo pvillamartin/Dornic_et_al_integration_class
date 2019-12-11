@@ -1,0 +1,205 @@
+% ****** Start of file apssamp.tex ******
+%
+%   This file is part of the APS files in the REVTeX 4.1 distribution.
+%   Version 4.1r of REVTeX, August 2010
+%
+%   Copyright (c) 2009, 2010 The American Physical Society.
+%
+%   See the REVTeX 4 README file for restrictions and more information.
+%
+% TeX'ing this file requires that you have AMS-LaTeX 2.0 installed
+% as well as the rest of the prerequisites for REVTeX 4.1
+%
+% See the REVTeX 4 README file
+% It also requires running BibTeX. The commands are as follows:
+%
+%  1)  latex apssamp.tex
+%  2)  bibtex apssamp
+%  3)  latex apssamp.tex
+%  4)  latex apssamp.tex
+%
+\documentclass[%
+ reprint,
+%superscriptaddress,
+%groupedaddress,
+%unsortedaddress,
+%runinaddress,
+%frontmatterverbose, 
+%preprint,
+%showpacs,preprintnumbers,
+%nofootinbib,
+%nobibnotes,
+%bibnotes,
+ amsmath,amssymb,
+ aps,
+%pra,
+%prb,
+%rmp,
+%prstab,
+%prstper,
+%floatfix,
+longbibliography
+]{revtex4-1}
+
+\usepackage{graphicx}% Include figure files
+\usepackage{dcolumn}% Align table columns on decimal point
+\usepackage{bm}% bold math
+%\usepackage{hyperref}% add hypertext capabilities
+%\usepackage[mathlines]{lineno}% Enable numbering of text and display math
+%\linenumbers\relax % Commence numbering lines
+
+%\usepackage[showframe,%Uncomment any one of the following lines to test 
+%%scale=0.7, marginratio={1:1, 2:3}, ignoreall,% default settings
+%%text={7in,10in},centering,
+%%margin=1.5in,
+%%total={6.5in,8.75in}, top=1.2in, left=0.9in, includefoot,
+%%height=10in,a5paper,hmargin={3cm,0.8in},
+%]{geometry}
+
+\begin{document}
+
+%\preprint{APS/123-QED}
+
+
+\title{Dornic et al. integration method}% Force line breaks with \\
+% \thanks{A footnote to the article title}%
+
+
+
+\date{\today}% It is always \today, today,
+             %  but any date may be explicitly specified
+
+\begin{abstract}
+
+\end{abstract}
+
+\pacs{Valid PACS appear here}% PACS, the Physics and Astronomy
+                             % Classification Scheme.
+%\keywords{Suggested keywords}%Use showkeys class option if keyword
+                              %display desired
+\maketitle
+\onecolumngrid
+
+
+We consider the stochastic equation
+
+\begin{equation}\label{eq:fisher_stoch2}
+\dot{\rho}(x,t)= D\nabla^2 \rho + a
+\rho-bf^2+\gamma\sqrt{\rho}\xi(x,t)
+\end{equation}
+
+where $\rho(x,t)$ is the population density at space $x$ and time $t$, and
+$\xi(x,t)$ a Gaussian white noise satisfying $\langle
+\xi(x,t)\rangle=0$ and  $\langle
+\xi(x,t) \xi(x',t')\rangle=\delta(x-x')\delta(t-t')$.\\
+
+We perform a two-step numerical integration (see \cite{dornic2005integration,weissmann2018simulation}):
+
+\begin{enumerate}
+ \item {\it{Non-linear and diffusion terms}}.
+ Integration of $\dot{\rho}(x,t)= D\nabla^2 \rho - b \rho^2$ is done
+ by employing a finite-difference fourth-order Runge-Kutta method
+ obtaining a first solution $\rho^*$.
+ 
+ \item {\it{Linear and stochastic terms}}. The term
+ $a \rho+\gamma\sqrt{\rho}\xi(x,t)$ is integrated
+ in an exact way as \cite{dornic2005integration}:
+ 
+ \begin{equation}
+  \rho(x,t)=r_\mathrm{Gamma}\{r_\mathrm{Poisson}\{\lambda \rho^*(x,t) e^{at}\}\}/\lambda.
+ \end{equation}
+
+
+ being $\lambda=\frac{2a}{\gamma^2(e^{at}-1)}$, and
+ $r_\mathrm{Gamma}$, $r_\mathrm{Poisson}$ random values 
+ obtained from the Gamma and Poisson probability distributions, i.e. 
+ $Prob[r_\mathrm{Gamma}(a)=z]=\frac{z^{a-1}e^{-z}}{\Gamma [a]}$
+ and $Prob[r_\mathrm{Poisson}(a)=z]=\frac{a^ze^{-a}}{z!}$, respectively. 
+\end{enumerate}
+
+%merlin.mbs apsrev4-1.bst 2010-07-25 4.21a (PWD, AO, DPC) hacked
+%Control: key (0)
+%Control: author (0) dotless jnrlst
+%Control: editor formatted (1) identically to author
+%Control: production of article title (0) allowed
+%Control: page (1) range
+%Control: year (0) verbatim
+%Control: production of eprint (0) enabled
+\begin{thebibliography}{4}%
+\makeatletter
+\providecommand \@ifxundefined [1]{%
+ \@ifx{#1\undefined}
+}%
+\providecommand \@ifnum [1]{%
+ \ifnum #1\expandafter \@firstoftwo
+ \else \expandafter \@secondoftwo
+ \fi
+}%
+\providecommand \@ifx [1]{%
+ \ifx #1\expandafter \@firstoftwo
+ \else \expandafter \@secondoftwo
+ \fi
+}%
+\providecommand \natexlab [1]{#1}%
+\providecommand \enquote  [1]{``#1''}%
+\providecommand \bibnamefont  [1]{#1}%
+\providecommand \bibfnamefont [1]{#1}%
+\providecommand \citenamefont [1]{#1}%
+\providecommand \href@noop [0]{\@secondoftwo}%
+\providecommand \href [0]{\begingroup \@sanitize@url \@href}%
+\providecommand \@href[1]{\@@startlink{#1}\@@href}%
+\providecommand \@@href[1]{\endgroup#1\@@endlink}%
+\providecommand \@sanitize@url [0]{\catcode `\\12\catcode `\$12\catcode
+  `\&12\catcode `\#12\catcode `\^12\catcode `\_12\catcode `\%12\relax}%
+\providecommand \@@startlink[1]{}%
+\providecommand \@@endlink[0]{}%
+\providecommand \url  [0]{\begingroup\@sanitize@url \@url }%
+\providecommand \@url [1]{\endgroup\@href {#1}{\urlprefix }}%
+\providecommand \urlprefix  [0]{URL }%
+\providecommand \Eprint [0]{\href }%
+\providecommand \doibase [0]{http://dx.doi.org/}%
+\providecommand \selectlanguage [0]{\@gobble}%
+\providecommand \bibinfo  [0]{\@secondoftwo}%
+\providecommand \bibfield  [0]{\@secondoftwo}%
+\providecommand \translation [1]{[#1]}%
+\providecommand \BibitemOpen [0]{}%
+\providecommand \bibitemStop [0]{}%
+\providecommand \bibitemNoStop [0]{.\EOS\space}%
+\providecommand \EOS [0]{\spacefactor3000\relax}%
+\providecommand \BibitemShut  [1]{\csname bibitem#1\endcsname}%
+\let\auto@bib@innerbib\@empty
+%</preamble>
+\bibitem [{\citenamefont {Dornic}\ \emph {et~al.}(2005)\citenamefont {Dornic},
+  \citenamefont {Chat{\'e}},\ and\ \citenamefont
+  {Munoz}}]{dornic2005integration}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Ivan}\ \bibnamefont
+  {Dornic}}, \bibinfo {author} {\bibfnamefont {Hugues}\ \bibnamefont
+  {Chat{\'e}}}, \ and\ \bibinfo {author} {\bibfnamefont {Miguel~A}\
+  \bibnamefont {Munoz}},\ }\bibfield  {title} {\enquote {\bibinfo {title}
+  {Integration of langevin equations with multiplicative noise and the
+  viability of field theories for absorbing phase transitions},}\ }\href@noop
+  {} {\bibfield  {journal} {\bibinfo  {journal} {Physical review letters}\
+  }\textbf {\bibinfo {volume} {94}},\ \bibinfo {pages} {100601} (\bibinfo
+  {year} {2005})}\BibitemShut {NoStop}%
+  
+  \bibitem [{\citenamefont {Weissmann}\ \emph {et~al.}(2018)\citenamefont
+  {Weissmann}, \citenamefont {Shnerb},\ and\ \citenamefont
+  {Kessler}}]{weissmann2018simulation}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {Haim}\ \bibnamefont
+  {Weissmann}}, \bibinfo {author} {\bibfnamefont {Nadav~M}\ \bibnamefont
+  {Shnerb}}, \ and\ \bibinfo {author} {\bibfnamefont {David~A}\ \bibnamefont
+  {Kessler}},\ }\bibfield  {title} {\enquote {\bibinfo {title} {Simulation of
+  spatial systems with demographic noise},}\ }\href@noop {} {\bibfield
+  {journal} {\bibinfo  {journal} {Physical Review E}\ }\textbf {\bibinfo
+  {volume} {98}},\ \bibinfo {pages} {022131} (\bibinfo {year}
+  {2018})}\BibitemShut {NoStop}%
+  
+\end{thebibliography}%
+
+
+
+\end{document}
+%
+% ****** End of file apssamp.tex ******
