@@ -5,7 +5,7 @@
 #include <cstdio>
 #include <iostream>
 #include <vector>
-#include <gsl/gsl_rng.h>
+#include <random>
 #include "Dornic_et_al_integration_method.h"
 
 using namespace std;
@@ -55,13 +55,11 @@ int main(int argc, char *argv[]){
 
     ///////////////////////// INITIALIZATION ///////////////////////
     //Random number generator
-    int rand_seed=1;
-    const gsl_rng_type * gsl_rng_T;
-    gsl_rng * r;
-    gsl_rng_env_setup();
-    gsl_rng_default_seed=rand_seed;
-    gsl_rng_T=gsl_rng_default;
-    r=gsl_rng_alloc(gsl_rng_T);
+    int rand_seed=92612112019;
+
+    RNG gen(rand_seed); //MT19937 is a RNG with long period, good quality
+    //uniform_real_distribution<double> ran_u(0.0, 1.0); //Uniform distribution [0,1[
+
 
     //Initialization of parameters
     f_parameters.push_back(diffusion_coefficient);
@@ -79,7 +77,7 @@ int main(int argc, char *argv[]){
     ///////////////////////// INTEGRATION ///////////////////////
     t=0;
     while(t<tmax){
-        dornic.integrate(r);
+        dornic.integrate(gen);
         t+=dt;
 
         mean_f=0;

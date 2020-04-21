@@ -12,11 +12,11 @@
 #include <vector>
 #include <list>
 #include <algorithm>
-#include <gsl/gsl_rng.h>
-#include <gsl/gsl_randist.h>
+#include<random>
 
 #define CONSTANT_COEFFICIENTS true
 #define CONSTANT_CELLS_NUMBER true
+#define RNG mt19937
 
 using namespace std;
 
@@ -53,12 +53,11 @@ public:
         dtm=0.5*dt;
         dts=dt/6.0;
         #if CONSTANT_CELLS_NUMBER
-        for(int i=0;i<cells_number;i++){
-            f1.push_back(0);
-            f2.push_back(0);
-            f3.push_back(0);
-            f4.push_back(0);
-        }
+
+        f1 = vector<double>(cells_number, 0.0);
+        f2 = vector<double>(cells_number, 0.0);
+        f3 = vector<double>(cells_number, 0.0);
+        f4 = vector<double>(cells_number, 0.0);
         #endif
 
         //Initialization of Dornic variables
@@ -72,20 +71,21 @@ public:
     }
 
     ///////////////////////// DORNIC INTEGRATION ///////////////////////
-    void integrate(gsl_rng *r, vector <double> *f_parameters=NULL){
+    void integrate(RNG &gen, vector <double> *f_parameters=NULL){
         //RUNGE-KUTTA VARIABLES
         #if !(CONSTANT_CELLS_NUMBER)
         f1.clear();
         f2.clear();
         f2.clear();
         f2.clear();
-        for(int i=0;i<cell_density->size();i++){
-            f1.push_back(0);
-            f2.push_back(0);
-            f3.push_back(0);
-            f4.push_back(0);
-        }
+
+        f1 = vector<double>(cell_density->size(), 0.0);
+        f2 = vector<double>(cell_density->size(), 0.0);
+        f3 = vector<double>(cell_density->size(), 0.0);
+        f4 = vector<double>(cell_density->size(), 0.0);
         #endif
+
+
         //DORNIC VARIABLES
         #if !(CONSTANT_COEFFICIENTS)
         set_coefficients(f_parameters);
@@ -101,10 +101,18 @@ public:
         RungeKutta_integrate(&f2, &f3, dtm);
         RungeKutta_integrate(&f3, &f4, dt);
 
+        //Define distributions to be used later
+        poisson_distribution<int> poisson;
+        gamma_distribution<double> gamma;
+
         ///Dornic integration of the noise and linear term
         for(int i=0;i<cell_density.size();i++){
             cell_density[i]+=dts*(f1[i]+2.0*f2[i]+2.0*f3[i]+f4[i]);
-            cell_density[i]=gsl_ran_gamma(r,gsl_ran_poisson(r,lambda_product*cell_density[i]),1)/lambda;
+
+            poisson = poisson_distribution<int>(lambda_product * cell_density[i]);
+            gamma = gamma_distribution<double>(poisson(gen), 1.0);
+
+            cell_density[i]= gamma(gen)/lambda;
         }
     }
 
