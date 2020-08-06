@@ -14,16 +14,17 @@ int main(int argc, char *argv[])
 {
 
     ///////////////////////// DEFAULT DYNAMICS PARAMETERS ///////////////////////
-    int number_cells=1024;                                      //Number of lattice cells
-    double diffusion_coefficient=1;                             //Diffusion coefficient
+    int number_cells=4096;                                        //Number of lattice cells
+    double diffusion_coefficient=0.1;                             //Diffusion coefficient
+    double lambda;
     double linear_coefficient=0.01;                             //First order term coefficient
     double quadratic_coefficient=2;                             //Second order term coefficient
-    double noise_coefficient=sqrt(1./double(number_cells));     //Demographic noise coefficient
+    double noise_coefficient=1.0;     //Demographic noise coefficient
 
     ///////////////////////// DEFAULT INTEGRATION PARAMETERS ///////////////////////
-    double tmax=1000000;                                        //Maximum simulation time
-    double dx=1;                                                //Spatial integration increment
-    double dt=0.1;                                              //Temporal integration increment
+    double tmax=100;                                        //Maximum simulation time
+    double dx=0.5;                                                //Spatial integration increment
+    double dt=0.01;                                              //Temporal integration increment
 
     ///////////////////////// PARAMETERS FROM TERMINAL ///////////////////////
     // In order to alter the value of the parameters from terminal execute the
@@ -57,23 +58,90 @@ int main(int argc, char *argv[])
     f_parameters = {diffusion_coefficient, linear_coefficient, noise_coefficient, quadratic_coefficient};
 
     //Declaration of Dornic class with the given parameters
-    Dornic dornic(dt,dx,number_cells,f_parameters);
+    Dornic dornic(dt,dx,number_cells);
 
     //Initialization of lattice and initial conditions
-    dornic.set_1D_lattice();
-    dornic.random_intial_cond(gen);
+    dornic.set_2D_lattice();
 
     ///////////////////////// INTEGRATION ///////////////////////
 
+    double aver, aver2;
+    double t_heatup = 10.0;
+    double ro_total;
+    double thrs = 1e-2;
+    //int nits = (tmax - t_heatup) / dt;
+    int nits;
+    ft_file.open("prueba");
+    //lambda = 1.1;
+    for (lambda = 1.1; lambda <= 2.0; lambda += 0.05)
+    {
+        cout << lambda << endl;
+
+        linear_coefficient = lambda - 1.0;
+        quadratic_coefficient = lambda;
+
+        f_parameters[1] = linear_coefficient;
+        f_parameters[3] = quadratic_coefficient;
+
+        dornic.set_coefficients(f_parameters);
+        dornic.random_intial_cond(gen);
+
+        aver = aver2 = 0.0;
+        t = 0;
+        ro_total = 1.0;
+        nits = 0;
+        while (t < tmax && ro_total > thrs)
+        {
+            dornic.integrate(gen);
+            if (t > t_heatup)
+            {
+                aver += dornic.avg_density;
+                aver2 += dornic.avg_density * dornic.avg_density;
+                nits++;
+            }
+            ro_total = dornic.avg_density * number_cells;
+
+            t += dt;
+        }
+
+        if (ro_total > thrs)
+        {
+            aver /= nits * 1.0;
+            aver2 /= nits * 1.0;
+        }
+        else
+        {
+            aver = aver2 = 0.0;
+        }
+        
+
+        ft_file << lambda << " " << aver << " " << aver2 - aver*aver << endl;
+    }
+    ft_file.close();
+
+
+    /*lambda = 2.0;
+    linear_coefficient = lambda - 1.0;
+    quadratic_coefficient = lambda;
+
+    f_parameters[1] = linear_coefficient;
+    f_parameters[3] = quadratic_coefficient;
+
+    dornic.set_coefficients(f_parameters);
+    dornic.random_intial_cond(gen);
+
+    tmax = 500.0;
+    
     ft_file.open("prueba");
     for (t=0; t<=tmax; t+=dt)
     {
         dornic.integrate(gen);
-        t+=dt;
         ft_file << t << " " << dornic.avg_density <<endl;
     }
-    ft_file.close();
+    ft_file.close();*/
+    
+
 
     return EXIT_SUCCESS;
-}
+} 
 

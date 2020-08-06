@@ -30,7 +30,7 @@ class Dornic{
 public:
     //CELLS DENSITY AND ADJACENCY NETWORK
     vector <double> cell_density;
-    double avg_density, avg_density2;
+    double avg_density;
     int ncells;
     vector< vector<int> > neighbors;
 
@@ -70,10 +70,6 @@ public:
 
         //Initialization of Dornic variables
         set_coefficients(f_parameters);
-        double lambda_const=2./(noise_coeff*noise_coeff);
-        double lambda_exp=exp(linear_coeff*dt);
-        lambda=lambda_const*linear_coeff/(lambda_exp-1.);
-        lambda_product=lambda*lambda_exp;
     }
 
     //Overload with no parameters
@@ -126,7 +122,7 @@ public:
         gamma_distribution<double> gamma;
 
         ///Dornic integration of the noise and linear term
-        avg_density = avg_density2 = 0.0;
+        avg_density = 0.0;
 
         for(int i=0; i<ncells; i++)
         {
@@ -137,15 +133,12 @@ public:
 
             cell_density[i]= gamma(gen)/lambda;
 
-
             //Make averages
             avg_density += cell_density[i];
-            avg_density2 += cell_density[i] * cell_density[i];
         }
 
         //Finish averages
         avg_density /= 1.0*ncells;
-        avg_density2 /= 1.0*ncells;
     }
 
     //Non-constant coefficient overload of function
@@ -162,10 +155,6 @@ public:
 
         //DORNIC VARIABLES
         set_coefficients(f_parameters);
-        double lambda_const=2./(noise_coeff*noise_coeff);
-        double lambda_exp=exp(linear_coeff*dt);
-        lambda=lambda_const*linear_coeff/(lambda_exp-1.);
-        lambda_product=lambda*lambda_exp;
 
         ///Runge-Kutta integration of the non-linear term and difussion
         RungeKutta_integrate(f1, f1, 0);
@@ -178,7 +167,7 @@ public:
         gamma_distribution<double> gamma;
 
         ///Dornic integration of the noise and linear term
-        avg_density = avg_density2 = 0.0;
+        avg_density = 0.0;
 
         for(int i=0; i<ncells; i++)
         {
@@ -192,12 +181,9 @@ public:
 
             //Make averages
             avg_density += cell_density[i];
-            avg_density2 += cell_density[i] * cell_density[i];
         }
-
         //Finish averages
         avg_density /= 1.0*ncells;
-        avg_density2 /= 1.0*ncells;
     }
 
 
@@ -206,6 +192,13 @@ public:
     {
         set_essential_coefficients(f_parameters);
         set_non_linear_coefficients(f_parameters);
+
+        double lambda_const=2./(noise_coeff*noise_coeff);
+        double lambda_exp=exp(-linear_coeff*dt);
+        lambda=lambda_const*linear_coeff*lambda_exp/(1.0-lambda_exp);
+        lambda_product=lambda/lambda_exp;
+
+        cout << lambda_const << " " << lambda_exp << " " << lambda << " " << lambda_product << endl;
     }
 
 
