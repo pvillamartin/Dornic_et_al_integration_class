@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
     ///////////////////////// DEFAULT DYNAMICS PARAMETERS ///////////////////////
     int number_cells=4096;                                      //Number of lattice cells
     double diffusion_coefficient=0.1;                           //Diffusion coefficient
-    double linear_coefficient=0.01;                             //First order term coefficient
+    double linear_coefficient=1.0;                             //First order term coefficient
     double quadratic_coefficient=2;                             //Second order term coefficient
     double noise_coefficient=1.0;                               //Demographic noise coefficient
 
@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
     dornic.set_coefficients(f_parameters);
     dornic.random_intial_cond(gen);
 
-    tmax = 500.0;
+    tmax = 100.0;
     
     ft_file.open(filepath);
     for (t=0; t<=tmax; t+=dt)

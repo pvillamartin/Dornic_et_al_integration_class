@@ -18,6 +18,10 @@
 #define CONSTANT_CELL_NUMBER true
 #endif
 
+#ifndef APPROX_POISSON
+#define APPROX_POISSON 0
+#endif
+
 #ifndef RNG
 #define RNG mt19937
 #endif
@@ -42,6 +46,7 @@ private:
     double lambda, lambda_product;
     poisson_distribution<int> poisson;
     gamma_distribution<double> gamma;
+    normal_distribution<double> normal;
 
     //CELLS DENSITY AND ADJACENCY NETWORK
     vector <double> cell_density;
@@ -236,6 +241,7 @@ public:
         int i;
 
         double k4, cell_new;
+        double mu;
 
         avg_density = 0.0;
         for(i=0; i<ncells; i++)
@@ -244,9 +250,22 @@ public:
 
             cell_density[i] += dts * (k1[i] + 2*(k2[i] + k3[i]) + k4);
 
+            #if APPROX_POISSON==0
             poisson = poisson_distribution<int>(lambda_product * cell_density[i]);
             gamma = gamma_distribution<double>(poisson(gen), 1.0);
-
+            #else
+            mu = lambda_product * cell_density[i];
+            if (mu > APPROX_POISSON)
+            {
+                normal = normal_distribution<double>(mu, sqrt(mu));
+                gamma = gamma_distribution<double>(normal(gen), 1.0);
+            }
+            else
+            {
+                poisson = poisson_distribution<int>(lambda_product * cell_density[i]);
+                gamma = gamma_distribution<double>(poisson(gen), 1.0);
+            }
+            #endif
             cell_density[i]= gamma(gen)/lambda;
 
             //Make averages
@@ -259,7 +278,7 @@ public:
     void euler(vector<double> &aux, RNG &gen)
     {
         int i;
-
+        double mu;
         double f;
 
         avg_density = 0.0;
@@ -269,8 +288,22 @@ public:
 
             aux[i] = cell_density[i] + dt * f;
 
+            #if APPROX_POISSON==0
             poisson = poisson_distribution<int>(lambda_product * aux[i]);
             gamma = gamma_distribution<double>(poisson(gen), 1.0);
+            #else
+            mu = lambda_product * aux[i];
+            if (mu > APPROX_POISSON)
+            {
+                normal = normal_distribution<double>(mu, sqrt(mu));
+                gamma = gamma_distribution<double>(normal(gen), 1.0);
+            }
+            else
+            {
+                poisson = poisson_distribution<int>(lambda_product * aux[i]);
+                gamma = gamma_distribution<double>(poisson(gen), 1.0);
+            }
+            #endif
 
             aux[i]= gamma(gen)/lambda;
 
@@ -464,6 +497,12 @@ public:
     double density() 
     {
         return avg_density;
+    }
+
+    //Check the average mean of the Poisson distribution
+    double avg_poisson_mean()
+    {
+        return lambda_product * avg_density;
     }
 
 };
