@@ -3,16 +3,15 @@
 // Updated by Victor on August 2020
 //
 
+#ifndef DORNIC_H
+#define DORNIC_H
+
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
-#include <cstring>
-#include <cstdlib>
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include <list>
-#include <algorithm>
 #include <random>
 
 #ifndef CONSTANT_CELL_NUMBER
@@ -23,19 +22,16 @@
 #define RNG mt19937
 #endif
 
+#ifndef USE_EULER
+#define USE_EULER false
+#endif
+
 using namespace std;
 
-class Dornic{
+class Dornic
+{
 
-public:
-    //CELLS DENSITY AND ADJACENCY NETWORK
-    vector <double> cell_density;
-    double avg_density;
-    int ncells;
-    vector< vector<int> > neighbors;
-
-    //COEFFICIENTS
-    double D, linear_coeff, noise_coeff, quadratic_coeff;
+private:
 
     //RUNGE-KUTTA VARIABLES
     vector <double> k1,k2,k3,k4;
@@ -43,9 +39,20 @@ public:
     double dt,dx,dtm,dts;
 
     //DORNIC VARIABLES
-    double lambda,lambda_product;
+    double lambda, lambda_product;
     poisson_distribution<int> poisson;
     gamma_distribution<double> gamma;
+
+    //CELLS DENSITY AND ADJACENCY NETWORK
+    vector <double> cell_density;
+    double avg_density;
+    int ncells;
+    vector< vector<int> > neighbors;
+
+    //COEFFICIENTS
+    double linear_coeff, noise_coeff;
+
+public:
 
     //Class constructor
     Dornic(const double dt_in, const double dx_in, const double cells_number, const vector<double> &f_parameters)
@@ -96,7 +103,6 @@ public:
         aux_cell_new = vector<double>(ncells);
         aux_cell_old = vector<double>(ncells);
 
-
         #if CONSTANT_CELL_NUMBER
         k1 = vector<double>(ncells, 0.0);
         k2 = vector<double>(ncells, 0.0);
@@ -119,6 +125,8 @@ public:
         k4 = vector<double>(ncells, 0.0);
         #endif
 
+
+        #if (!USE_EULER)
         //Runge-Kutta integration of the non-linear term and difussion.
         //Update of cells is done in the same loop as last RK step for efficiency
         f1(aux_cell_old, k1);
@@ -127,6 +135,10 @@ public:
         f2f3(aux_cell_old, aux_cell_new, k3, dt);
         aux_cell_old.swap(aux_cell_new);
         f4_and_stochastic(aux_cell_old, k1, k2, k3, gen);
+        #else
+        euler(aux_cell_old, gen);
+        cell_density.swap(aux_cell_old); 
+        #endif
     }
 
     //Non-constant coefficient overload of function
@@ -144,6 +156,7 @@ public:
         //DORNIC VARIABLES
         set_coefficients(f_parameters);
 
+        #if (!USE_EULER)
         //Runge-Kutta integration of the non-linear term and difussion.
         //Update of cells is done in the same loop as last RK step for efficiency
         f1(aux_cell_old, k1);
@@ -151,11 +164,16 @@ public:
         aux_cell_old.swap(aux_cell_new);            //Swap contents is O(1), better than old = fast
         f2f3(aux_cell_old, aux_cell_new, k3, dt);
         aux_cell_old.swap(aux_cell_new);
-        f4_and_stochastic(aux_cell_old, k1, k2, k3, gen);    
+        f4_and_stochastic(aux_cell_old, k1, k2, k3, gen);
+        #else
+        euler(aux_cell_old, gen);
+        cell_density.swap(aux_cell_old); 
+        #endif
     }
 
+    ///////////////////////// INITIALIZATION FUNCTIONS ///////////////////////
 
-    ///////////////////////// BASIC INTEGRATION FUNCTIONS ///////////////////////
+    //Set all the parameters
     void set_coefficients(const vector <double> &f_parameters)
     {
         set_essential_coefficients(f_parameters);
@@ -165,59 +183,55 @@ public:
         double lambda_exp=exp(-linear_coeff*dt);
         lambda=lambda_const*linear_coeff*lambda_exp/(1.0-lambda_exp);
         lambda_product=lambda/lambda_exp;
-
-        cout << lambda_const << " " << lambda_exp << " " << lambda << " " << lambda_product << endl;
     }
 
+    //Declaration, to be filled by user
+    void set_non_linear_coefficients(const vector <double> &f_parameters);
 
+    //Coefficients needed to integrate linear + noise parts
     void set_essential_coefficients(const vector <double> &f_parameters)
     {
-        D = f_parameters[0] / (dx * dx);
-        linear_coeff = f_parameters[1];
-        noise_coeff = f_parameters[2];
+        linear_coeff = f_parameters[0];
+        noise_coeff = f_parameters[1];
+
+        double lambda_const=2./(noise_coeff*noise_coeff);
+        double lambda_exp=exp(-linear_coeff*dt);
+        lambda=lambda_const*linear_coeff*lambda_exp/(1.0-lambda_exp);
+        lambda_product=lambda/lambda_exp;
     }
 
-    double diffusion_integrate(const int inode, const vector<double> &f_in)
-    {
-        double diff_sum;
-        int num_neigh, index_neigh;
 
-        num_neigh = neighbors[inode].size();
-        diff_sum = 0.0;
+    ///////////////////////// CORE INTEGRATION FUNCTIONS ///////////////////////
 
-        //DIFFUSION INTEGRATION
-        for(int i=0; i<num_neigh; i++)
-        {
-            index_neigh= neighbors[inode][i];
-            diff_sum += f_in[index_neigh];
-        }
-        
-        return D*(diff_sum - num_neigh*f_in[inode]); 
-    }
+    //Declaration -user will fill this function in the CPP file
+    double non_linear_rhs(const int inode, const vector<double> &field) const;
 
+    //RK first function
     void f1(vector<double> &aux_cell, vector<double> &k1)
     {
         int i;
 
         for(i=0; i<ncells; i++)
         {
-            k1[i] = diffusion_integrate(i, cell_density) + non_linear_integrate(i, cell_density); 
+            k1[i] = non_linear_rhs(i, cell_density);
             aux_cell[i] = cell_density[i] + dtm*k1[i];
         }
     }
 
-    void f2f3(const vector<double> &aux_cell_old, vector<double> &aux_cell_new, vector<double> &k_out, const double dt_in)
+    //RK second and third functions
+    void f2f3(const vector<double> &aux_old, vector<double> &aux_new, vector<double> &k_out, const double dt_in)
     {
         int i;
 
         for(i=0; i<ncells; i++)
         {
-            k_out[i] = diffusion_integrate(i, aux_cell_old) + non_linear_integrate(i, aux_cell_old); 
-            aux_cell_new[i] = cell_density[i] + dt_in * k_out[i];
+            k_out[i] = non_linear_rhs(i, aux_old);
+            aux_new[i] = cell_density[i] + dt_in*k_out[i];
         }
     }
 
-    void f4_and_stochastic(const vector<double> &aux_cell_old, const vector<double> &k1, const vector<double> &k2, const vector<double> &k3, RNG &gen)
+    //RK fourth function and stochastic step, all in the same loop
+    void f4_and_stochastic(const vector<double> &aux_old, const vector<double> &k1, const vector<double> &k2, const vector<double> &k3, RNG &gen)
     {
         int i;
 
@@ -226,7 +240,7 @@ public:
         avg_density = 0.0;
         for(i=0; i<ncells; i++)
         {
-            k4 = diffusion_integrate(i, aux_cell_old) + non_linear_integrate(i, aux_cell_old); 
+            k4 = non_linear_rhs(i, aux_old);
 
             cell_density[i] += dts * (k1[i] + 2*(k2[i] + k3[i]) + k4);
 
@@ -241,17 +255,30 @@ public:
         avg_density /= 1.0 * ncells;    
     }
 
-    ///////////////////////// NON-LINEAR TERM INTEGRATION FUNCTIONS ///////////////////////
-    void set_non_linear_coefficients(const vector <double> &f_parameters)
+    //Euler integration
+    void euler(vector<double> &aux, RNG &gen)
     {
-        quadratic_coeff=f_parameters[3];
-    }
+        int i;
 
-    double non_linear_integrate(const int inode, const vector <double> &f_in)
-    {
-        return -quadratic_coeff * f_in[inode] * f_in[inode];
-    }
+        double f;
 
+        avg_density = 0.0;
+        for(i=0; i<ncells; i++)
+        {
+            f = non_linear_rhs(i, cell_density);
+
+            aux[i] = cell_density[i] + dt * f;
+
+            poisson = poisson_distribution<int>(lambda_product * aux[i]);
+            gamma = gamma_distribution<double>(poisson(gen), 1.0);
+
+            aux[i]= gamma(gen)/lambda;
+
+            //Make averages
+            avg_density += aux[i];
+        }    
+        avg_density /= 1.0 * ncells;   
+    }
 
     ///////////////////////// NETWORK ///////////////////////
     void set_1D_lattice(const bool periodic = false)
@@ -386,6 +413,7 @@ public:
 
     ///////////////////////// INITIAL CONDITIONS ///////////////////////
 
+    //Random initial values for all cells between minv and maxv
     void random_intial_cond(RNG &gen, const double minv = 0.0, const double maxv = 1.0)
     {
         uniform_real_distribution<double> unif(minv, maxv);
@@ -400,18 +428,19 @@ public:
         avg_density /= 1.0*ncells;
     }
 
+    //All cells same value
     void homogeneous_initial_cond(const double density_value = 1.0)
     {
         cell_density = vector<double>(ncells, density_value);
         avg_density = density_value;
     }
 
+    //All cells to 0 except the specified one
     void single_seed(const int inode, const double value = 1.0)
     {
         cell_density[inode] = value;
         avg_density = value / (1.0 * ncells);
     }    
-
 
     ///////////////////////// OPERATOR OVERLOADS ///////////////////////
 
@@ -428,16 +457,15 @@ public:
 
     //Declare as friend function
     friend ostream& operator<<(ostream& os, const Dornic &dornic);
+
+    ///////////////////////// USABILITY ///////////////////////
+
+    //Make visible the density
+    double density() 
+    {
+        return avg_density;
+    }
+
 };
 
-//Ostream operator allows to write all the object information
-ostream& operator<<(ostream& os, const Dornic &dornic)
-{
-    int i;
-    for (i=0; i < dornic.ncells; i++)
-    {
-        os << dornic[i] << " ";
-    }
-    os << endl;
-    return os;
-}
+#endif
